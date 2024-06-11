@@ -1,0 +1,67 @@
+html{
+    scroll-behavior: smooth;
+}
+
+.header{
+    background-color: rgb(59, 115, 246);
+    height: 60px;
+}
+
+.logo{
+    font-family: "Fuzzy Bubbles", sans-serif;
+    margin-right: auto;
+    margin-left: 1rem;
+}
+
+.logout-btn{
+    margin-right: 1rem;
+    background-color: white;
+    border: none;
+    border-radius: 16px;
+    color: rgb(7, 69, 212);
+    height: 2rem;
+}
+
+.logout-btn:hover{
+    color: red;
+}
+
+.main-container {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    grid-gap: 10px;
+    min-height: 100vh;
+  }
+  
+  /* Media query to hide sidebar on mobile devices */
+  @media (max-width: 768px) {
+    .main-container {
+      grid-template-columns: 1fr;  /* Hide sidebar on small screens */
+    }
+    #sidebar {
+      display: none;  /* Hide sidebar content as well */
+    }
+  }
+
+.menu{
+    margin-bottom: 10px;
+    border: none;
+    background-color: transparent;
+    border-radius: 100px;
+    padding: 4px;
+}
+@media (min-width: 768px) {
+    .menu{
+        display: none;
+    }
+    
+}
+
+.menu:hover{
+    background-color: rgb(28, 72, 173);
+}
+
+.menu-img{
+    width: 32px;
+    height: 32px;
+}
