@@ -65,3 +65,35 @@ html{
     width: 32px;
     height: 32px;
 }
+
+.sidebar-container{
+    position: relative;
+    border: 1px solid lightgray;
+}
+
+.sidebar{
+    position: absolute;
+    top: 0px;
+    left: 0;
+    height: 100%;
+    width: 200px;
+    padding-top: 15px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.side-action{
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+}
+.side-action:hover{
+    background-color: #e5e6e7;
+}
+
+.action-text{
+    margin: 0;
+}
