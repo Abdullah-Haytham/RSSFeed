@@ -1,5 +1,8 @@
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAntiforgery();
 var app = builder.Build();
+app.UseStaticFiles();
+app.UseAntiforgery();
 
 app.MapGet("/", () => "Hello World!");
 
