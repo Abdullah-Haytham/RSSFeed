@@ -32,17 +32,74 @@
     </header>
 
     <main class="main-container">
+        
+        <div class="modal fade" id="add-modal" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+
+                       <h5 class="modal-title" id="modal-title">Add Feed</h5>
+                       <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> 
+                    </div>
+
+                    <div class="modal-body">
+                        <form action="/login" method="post" class="modal-form">
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <input class="form-control" type="text" id="name" name="name" placeholder="Name" />
+                            </div>
+                
+                            <div class="form-group">
+                                <label for="url">Url</label>
+                                <input class="form-control" type="text" id="url" name="url" placeholder="Url" />
+                            </div>
+                
+                            <button class="btn btn-primary" type="submit">Add Feed</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="modal-title2" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+
+                       <h5 class="modal-title" id="modal-title2">Delete Feed</h5>
+                       <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> 
+                    </div>
+
+                    <div class="modal-body">
+                        <form action="/login" method="post" class="modal-form">
+                            <div class="form-group mb-3">
+                                <label for="select">Feed Name</label>
+                                <select class="form-select" aria-label="Default select example">
+                                    <option selected>Open this select menu</option>
+                                    <option value="1">One</option>
+                                    <option value="2">Two</option>
+                                    <option value="3">Three</option>
+                                </select>
+                            </div>
+                
+                            <button class="btn btn-primary" type="submit">Delete Feed</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="sidebar" class="sidebar-container">
             <div class="sidebar">
 
                 <div class="actions-container">
                     <h5>Actions</h5>
-                    <div class="side-action"><img src="images/plus.svg" alt="add icon"> <p class="action-text">Add Feed</p></div>
-                    <div class="side-action"><img style="width: 20px;" src="images/close-svgrepo-com.svg" alt="add icon"> <p class="action-text">Delete Feed</p></div>
+                    <a data-bs-toggle="modal" data-bs-target="#add-modal" class="side-action"><img src="images/plus.svg" alt="add icon"> <p class="action-text">Add Feed</p></a>
+                    <a data-bs-toggle="modal" data-bs-target="#delete-modal" class="side-action"><img style="width: 20px;" src="images/close-svgrepo-com.svg" alt="add icon"> <p class="action-text">Delete Feed</p></a>
                 </div>
 
                 <h5>Feeds</h5>
-                <div class="shortcuts">  
+                <div class="shortcuts" hx-get="/shortcuts" hx-trigger="load" hx-swap="innerHTML">
                     <a class="shortcut">Sexy Bra</a>
                 </div>
             </div>
