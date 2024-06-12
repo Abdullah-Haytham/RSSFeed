@@ -64,4 +64,14 @@
 
 </body>
 
+<script>
+    const menu = document.querySelector('.menu');
+    const sidebar = document.querySelector('.sidebar-container');
+    const main = document.querySelector('.main-container');
+
+    menu.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+        main.classList.toggle('no-grid')
+    });
+</script>
 </html>
