@@ -202,3 +202,38 @@ html{
     text-decoration: underline;
 }
 
+.btn{
+    z-index: 3;
+}
+
+.alert-container{
+    position: relative;
+    height: 30px;
+    z-index: 1;
+}
+
+#alert-box{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    position: absolute;
+    top: -37px;
+    z-index: 1;
+    color: white;
+    padding-top: 5px;
+}
+
+.red{
+    background-color: #cc0000;
+    top: -7px !important;
+    transition: ease-in-out 0.5s;
+}
+
+.green{
+    background-color: #00cc00;
+    top: -7px !important; 
+    transition: ease-in-out 0.5s;
+}
+
