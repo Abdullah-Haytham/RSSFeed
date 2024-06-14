@@ -29,6 +29,16 @@ var cookieOptions = new CookieOptions
     Path = "/"
 };
 
+void deleteCookies(HttpContext context)
+{
+    var cookieOptions = new CookieOptions
+    {
+        Expires = DateTime.UtcNow.AddDays(-1),
+        Path = "/"
+    };
+    context.Response.Cookies.Append("UserId", "", cookieOptions);
+}
+
 app.MapGet("/token", (HttpContext context, IAntiforgery antiforgery) =>
 {
     var token = antiforgery.GetAndStoreTokens(context);
@@ -36,87 +46,290 @@ app.MapGet("/token", (HttpContext context, IAntiforgery antiforgery) =>
     return Results.Content(html, "text/html");
 });
 
+app.MapPost("/logout", (HttpContext context) =>
+{
+    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+    {
+        deleteCookies(context);
+        Results.Ok("User Logged Out");
+    }
+    Results.BadRequest("No user was logged in");
+});
+
 app.MapPost("/login", async (HttpContext context, IAntiforgery antiforgery, IDbConnection db, [FromForm] string email, [FromForm] string password) =>
 {
     await antiforgery.ValidateRequestAsync(context);
 
-    string sql = "SELECT COUNT(*) AS UserCount FROM users WHERE email = @Email AND password = @Password";
-    var result = await db.QueryFirstOrDefaultAsync<int>(sql, new { Email = email, Password = password });
+    string sql = "SELECT userId FROM users WHERE email = @Email AND password = @Password";
+    var userId = await db.QueryFirstOrDefaultAsync<int>(sql, new { Email = email, Password = password });
 
-    if(result == 1)
+    if (userId > 0)
     {
-        sql = "SELECT userId FROM users WHERE email = @Email AND password = @Password";
-        var userId = await db.QueryFirstOrDefaultAsync<int>(sql, new { Email = email, Password = password });
         context.Response.Cookies.Append("UserId", userId.ToString(), cookieOptions);
-        return Results.Ok("User Logged in successfully");
+        return Results.Content("""<div id="alert-box" class="green">User logged in successfully</div> """);
     }
 
-    return Results.Content("Ay 7aga for now", "text/html");
+    if(email == null || email == "")
+    {
+        return Results.Content("""<div id="alert-box" class="red">Please Provide an Email</div> """);
+    }
+    else if(password == null || password == "")
+    {
+        return Results.Content("""<div id="alert-box" class="red">Please Provide a Password</div> """);
+    }
+    else if (password.Length < 8)
+    {
+        return Results.Content("""<div id="alert-box" class="red">Password is Too Short</div> """);
+    }
+    else if(password.Contains(" "))
+    {
+        return Results.Content("""<div id="alert-box" class="red">Password Can't contain spaces</div> """);
+    }
+    return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
 });
 
-app.MapGet("/shortcuts", async (IDbConnection db) =>
+app.MapPost("/register", async (HttpContext context, IAntiforgery antiforgery, IDbConnection db, [FromForm] string email, [FromForm] string password, [FromForm] string password2) =>
 {
-    var sql = "SELECT name FROM feeds WHERE userId=1"; //user id will need to be dynamic (use cookies 8aleban)
-    var names = await db.QueryAsync(sql);
+    await antiforgery.ValidateRequestAsync(context);
+    Console.WriteLine($"email: {email}, password: {password}, confirm password: {password2}");
 
-    StringBuilder shortcuts = new StringBuilder();
-    foreach (var name in names)
+    if (email == null || email == "")
     {
-        shortcuts.Append(@$"<a href=""#{name.name}"" class=""shortcut"">{name.name}</a>");
+        return Results.Content("""<div id="alert-box" class="red">Please Provide an Email</div> """);
     }
-    return Results.Content(shortcuts.ToString());
+    else if (password == null || password == "")
+    {
+        return Results.Content("""<div id="alert-box" class="red">Please Provide a Password</div> """);
+    }
+    else if (password2 == null || password2 == "")
+    {
+        return Results.Content("""<div id="alert-box" class="red">Please Confirm Your Password</div> """);
+    }
+    else if (password.Contains(" ") || password2.Contains(" "))
+    {
+        return Results.Content("""<div id="alert-box" class="red">Password Can't contain spaces</div> """);
+    }
+    else if(password != password2)
+    {
+        return Results.Content("""<div id="alert-box" class="red">Passwords Do not Match</div> """);
+    }
+    else if (password.Length < 8)
+    {
+        return Results.Content("""<div id="alert-box" class="red">Password is Too Short</div> """);
+    }
+
+    string sql = "INSERT INTO users(email, password) VALUES(@email, @password)";
+    int rows = await db.ExecuteAsync(sql, new { email = email, password = password });
+    if(rows > 0)
+    {
+        return Results.Content("""<div id="alert-box" class="green">User Created successfully</div> """);
+    }
+    return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
+
 });
 
-app.MapGet("/select-options", async (IDbConnection db) =>
-{
-    var sql = "SELECT name FROM feeds WHERE userId=1"; //user id will need to be dynamic (use cookies 8aleban)
-    var names = await db.QueryAsync(sql);
+app.MapGet("/register-page", () =>{
+    var htmlContent = """
+        <header class="header">
+            <div class="navbar d-flex align-items-center">
+                <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
+                <h3 class="logo text-white">Feedy</h3>
+            </div>
+        </header>
 
-    StringBuilder shortcuts = new StringBuilder();
-    shortcuts.Append(@$"<option selected>Select a feed to delete</option>");
-    foreach (var name in names)
+        <main class="login-container">
+            <form hx-post="/register" hx-target=".alert-container" class="login" id="register-form">
+                <h1 style="text-align: center; margin-bottom: 24px;">Register</h1>
+                <div hx-get="/token" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input class="form-control" type="email" id="email" name="email" placeholder="Email" />
+                    <p style="margin-top: 0px; margin-bottom: 15px;" class="email-val text-danger"></p>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input class="form-control" type="password" id="password" name="password" placeholder="Password" />
+                    <p style="margin-top: 0px; margin-bottom: 15px;" class="pass-val text-danger"></p>
+                </div>
+
+                <div class="form-group">
+                    <label for="password2">Confirm Password</label>
+                    <input class="form-control" type="password" id="password2" name="password2" placeholder="Re-enter Password" />
+                    <p style="margin-top: 0px; margin-bottom: 15px;" class="pass-val text-danger"></p>
+                </div>
+
+                <div style="margin-bottom: 8px;">already registered? <button class="to-login-btn">Login</button></div>
+
+                <button class="btn btn-primary" type="submit">Register</button>
+                <div class="alert-container">
+                    <div id="alert-box">
+                        invalid email or password
+                    </div>
+                </div>
+            </form>
+    </main>
+    <script>
+        const regEmailInput = document.getElementById("email");
+        const regPasswordInput = document.getElementById("password");
+        const regPasswordInput2 = document.getElementById("password2");
+    
+        function removeAlertClass() {
+            const alertingBox = document.getElementById("alert-box");
+            if (alertingBox.classList.contains("red")) {
+                alertingBox.classList.remove("red");
+            } else if(alertingBox.classList.contains("green")){
+                alertingBox.classList.remove("green");
+            }
+        }
+    
+        regEmailInput.addEventListener("click", removeAlertClass);
+        regPasswordInput.addEventListener("click", removeAlertClass);
+        regPasswordInput2.addEventListener("click", removeAlertClass);
+    </script>
+    """;
+
+    return Results.Content(htmlContent, "text/html");
+});
+
+app.MapGet("/login-page", () => {
+    var htmlContent = """
+         
+            <header class="header">
+                <div class="navbar d-flex align-items-center">
+                    <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
+                    <h3 class="logo text-white">Feedy</h3>
+                </div>
+            </header>
+
+            <main class="login-container">
+                <form hx-post="/login" hx-target=".alert-container" class="login" id="login-form">
+
+                    <h1 style="text-align: center; margin-bottom: 24px;">Login</h1>
+                    <div hx-get="/token" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input class="form-control" type="email" id="email" name="email" placeholder="Email" />
+                        <p style="margin-top: 0px; margin-bottom: 15px;" class="email-val text-danger"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input class="form-control" type="password" id="password" name="password" placeholder="Password" />
+                        <p style="margin-top: 0px; margin-bottom: 15px;" class="pass-val text-danger"></p>
+                    </div>
+
+                    <div style="margin-bottom: 8px;">Don't have an account? <button hx-get="/register-page" hx-target=".replace" hx-trigger="click" class="to-register-btn">Register</button></div>
+
+                    <button class="btn btn-primary" type="submit">Login</button>
+                    <div class="alert-container">
+                        <div id="alert-box">
+                            invalid email or password
+                        </div>
+                    </div>
+                </form>
+            </main>
+            <script>
+                const emailInput2 = document.getElementById("email");
+                const passwordInput2 = document.getElementById("password");
+        
+                function removeAlertClass() {
+                    const alertingBox = document.getElementById("alert-box");
+                    if (alertingBox.classList.contains("red")) {
+                        alertingBox.classList.remove("red");
+                    } else if(alertingBox.classList.contains("green")){
+                        alertingBox.classList.remove("green");
+                    }
+                }
+        
+                emailInput2.addEventListener("click", removeAlertClass);
+                passwordInput2.addEventListener("click", removeAlertClass);
+            </script>
+        """;
+
+    return Results.Content(htmlContent, "text/html");
+});
+
+app.MapPost("/add-feed", async(HttpContext context, IAntiforgery antiforgery, IDbConnection db) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+
+
+});
+
+app.MapGet("/shortcuts", async (HttpContext context, IDbConnection db) =>
+{
+    if(context.Request.Cookies.TryGetValue("UserId", out var userId))
     {
-        shortcuts.Append(@$"<option value={name.name}>{name.name}</option>");
+        var sql = "SELECT name FROM feeds WHERE userId=@userId"; 
+        var names = await db.QueryAsync(sql, new {userId = userId});
+
+        StringBuilder shortcuts = new StringBuilder();
+        foreach (var name in names)
+        {
+            shortcuts.Append(@$"<a href=""#{name.name}"" class=""shortcut"">{name.name}</a>");
+        }
+        return Results.Content(shortcuts.ToString());
     }
-    return Results.Content(shortcuts.ToString());
+    return Results.NoContent();
+});
+
+app.MapGet("/select-options", async (HttpContext context, IDbConnection db) =>
+{
+    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+    {
+        var sql = "SELECT name FROM feeds WHERE userId=@userId";
+        var names = await db.QueryAsync(sql, new { userId = userId });
+
+        StringBuilder shortcuts = new StringBuilder();
+        shortcuts.Append(@$"<option selected>Select a feed to delete</option>");
+        foreach (var name in names)
+        {
+            shortcuts.Append(@$"<option value={name.name}>{name.name}</option>");
+        }
+        return Results.Content(shortcuts.ToString());
+    }
+    return Results.NoContent();
 });
 
 app.MapGet("/feeds", async (IDbConnection db, HttpContext context) =>
 {
-    var sql = "SELECT name, url FROM feeds WHERE userID=1"; //user id will need to be dynamic (use cookies 8aleban)
-    var links = await db.QueryAsync(sql);
-
-    StringBuilder feedBuilder = new StringBuilder();
-    int count = 1;
-    foreach (var link in links)
+    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
     {
-        XmlReader reader = XmlReader.Create(link.url);
-        SyndicationFeed feedItems = SyndicationFeed.Load(reader);
-        reader.Close();
+        var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
+        var links = await db.QueryAsync(sql, new { userId = userId });
 
-        feedBuilder.Append($"""
+        StringBuilder feedBuilder = new StringBuilder();
+        int count = 1;
+        foreach (var link in links)
+        {
+            XmlReader reader = XmlReader.Create(link.url);
+            SyndicationFeed feedItems = SyndicationFeed.Load(reader);
+            reader.Close();
+
+            feedBuilder.Append($"""
             <div class="feed mb-4">
                 <h3 id="{link.name}" class="feed-title">{count}-{link.name}</h3>
             """); //add closing </div> for this in the end
-        var isFirst = true;
-        foreach (var item in feedItems.Items)
-        {
-            var description = item.Summary.Text;
-            var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
-            var publishedDate = item.PublishDate.DateTime;
-            var line = "";
-
-            if (isFirst)
+            var isFirst = true;
+            foreach (var item in feedItems.Items)
             {
-                line = "";
-                isFirst = false;
-            }
-            else
-            {
-                line = "<hr/>";
-            }
+                var description = item.Summary.Text;
+                var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
+                var publishedDate = item.PublishDate.DateTime;
+                var line = "";
 
-            feedBuilder.Append($"""
+                if (isFirst)
+                {
+                    line = "";
+                    isFirst = false;
+                }
+                else
+                {
+                    line = "<hr/>";
+                }
+
+                feedBuilder.Append($"""
                 {line}
                 <div class="feed-item">
                     <p dir="auto" class="description">
@@ -126,10 +339,12 @@ app.MapGet("/feeds", async (IDbConnection db, HttpContext context) =>
                     <p>Publish Date: {publishedDate}</p>
                 </div>
                 """);
+            }
+            feedBuilder.Append("</div>");
         }
-        feedBuilder.Append("</div>");    
+        return Results.Content(feedBuilder.ToString());
     }
-    return Results.Content(feedBuilder.ToString());
+    return Results.NoContent();
 });
 
 app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
@@ -141,7 +356,8 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                         <div class="navbar d-flex align-items-center">
                             <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                             <h3 class="logo text-white">Feedy</h3>
-                            <button class="logout-btn">logout</button>
+                            <button hx-post="logout" hx-trigger="click" hx-target=".logout" class="logout-btn">logout</button>
+                            <div class="d-none logout"></div>
                         </div>
                     </header>
 
@@ -222,11 +438,6 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                         </div>
                     </main>
 
-                    <footer style="width: 100%;">
-                        <div class="text-center p-3" style="background-color: rgb(59, 115, 246);">
-                            Copyright 2024 ©Abdullah Haytham Hedeya
-                        </div>
-                    </footer>
         """;
         return Results.Content(htmlContent, "text/html");
     }
@@ -238,15 +449,14 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                 <div class="navbar d-flex align-items-center">
                     <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                     <h3 class="logo text-white">Feedy</h3>
-                    <button class="logout-btn">logout</button>
                 </div>
             </header>
 
-            <main class="login-container replace">
-                <form action="/login" method="post" class="login" id="login-form">
+            <main class="login-container">
+                <form hx-post="/login" hx-target=".alert-container" class="login" id="login-form">
 
                     <h1 style="text-align: center; margin-bottom: 24px;">Login</h1>
-                    <div hx-get="/token" hx-trigger="load" hx-swap="innerHTML"></div>
+                    <div hx-get="/token" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>
                     <div class="form-group">
                         <label for="email">Email</label>
                         <input class="form-control" type="email" id="email" name="email" placeholder="Email" />
@@ -259,7 +469,7 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                         <p style="margin-top: 0px; margin-bottom: 15px;" class="pass-val text-danger"></p>
                     </div>
 
-                    <div style="margin-bottom: 8px;">Don't have an account? <button class="to-register-btn">Register</button></div>
+                    <div style="margin-bottom: 8px;">Don't have an account? <button hx-get="/register-page" hx-target=".replace" hx-trigger="click" class="to-register-btn">Register</button></div>
 
                     <button class="btn btn-primary" type="submit">Login</button>
                     <div class="alert-container">
@@ -269,12 +479,22 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                     </div>
                 </form>
             </main>
-
-            <footer style="width: 100%;">
-                <div class="text-center p-3" style="background-color: rgb(59, 115, 246);">
-                    Copyright 2024 ©Abdullah Haytham Hedeya
-                </div>
-            </footer>
+            <script>
+                const emailInput = document.getElementById("email");
+                const passwordInput = document.getElementById("password");
+        
+                function removeAlertClass() {
+                    const alertingBox = document.getElementById("alert-box");
+                    if (alertingBox.classList.contains("red")) {
+                        alertingBox.classList.remove("red");
+                    } else if(alertingBox.classList.contains("green")){
+                        alertingBox.classList.remove("green");
+                    }
+                }
+        
+                emailInput.addEventListener("click", removeAlertClass);
+                passwordInput.addEventListener("click", removeAlertClass);
+            </script>
         """;
         return Results.Content(htmlContent, "text/html");
     }

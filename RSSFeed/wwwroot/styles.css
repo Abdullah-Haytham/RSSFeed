@@ -212,7 +212,7 @@ html{
     z-index: 1;
 }
 
-#alert-box{
+#alert-box {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -223,6 +223,7 @@ html{
     z-index: 1;
     color: white;
     padding-top: 5px;
+    transition: ease-in-out 0.5s;
 }
 
 .red{
