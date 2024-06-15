@@ -42,6 +42,18 @@ document.body.addEventListener('htmx:afterRequest', function (evt) {
     if (evt.detail.requestConfig.path === "logout") {
         htmx.ajax("GET", "/login-page", { target: ".replace" })
     }
+
+    if (evt.detail.requestConfig.path === "/add-feed") {
+        const addMessage = document.getElementById("add-message")
+        var myModal = new bootstrap.Modal(document.getElementById('add-modal'));
+
+        if (addMessage.innerHTML === Feed Added Successfully){
+            htmx.ajax("GET", "/feeds", { target: ".feed-container" })
+            htmx.ajax("GET", "/shortcuts", { target: ".shortcuts" })
+        }
+        myModal.hide();
+        
+    }
 }
 )
 

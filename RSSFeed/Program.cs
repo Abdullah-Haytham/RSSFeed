@@ -250,11 +250,22 @@ app.MapGet("/login-page", () => {
     return Results.Content(htmlContent, "text/html");
 });
 
-app.MapPost("/add-feed", async(HttpContext context, IAntiforgery antiforgery, IDbConnection db) =>
+app.MapPost("/add-feed", async(HttpContext context, IAntiforgery antiforgery, IDbConnection db, [FromForm] string name, [FromForm] string url) =>
 {
     await antiforgery.ValidateRequestAsync(context);
 
+    Console.WriteLine($"Name: {name}, url: {url}");
+    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+    {
+        string sql = "INSERT INTO feeds(name, url, userId) VALUES(@name, @url, @userId)";
+        int rows = await db.ExecuteAsync(sql, new { name = name, url = url, userId = userId });
 
+        if (rows > 0) 
+        {
+            return Results.Content(""" <div id="add-message">Feed Added Successfully</div>""", "text/html");
+        }
+    }
+    return Results.Content(""" <div id="add-message">Feed not Added</div>""", "text/html");
 });
 
 app.MapGet("/shortcuts", async (HttpContext context, IDbConnection db) =>
@@ -294,42 +305,44 @@ app.MapGet("/select-options", async (HttpContext context, IDbConnection db) =>
 
 app.MapGet("/feeds", async (IDbConnection db, HttpContext context) =>
 {
-    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+    try
     {
-        var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
-        var links = await db.QueryAsync(sql, new { userId = userId });
-
-        StringBuilder feedBuilder = new StringBuilder();
-        int count = 1;
-        foreach (var link in links)
+        if (context.Request.Cookies.TryGetValue("UserId", out var userId))
         {
-            XmlReader reader = XmlReader.Create(link.url);
-            SyndicationFeed feedItems = SyndicationFeed.Load(reader);
-            reader.Close();
+            var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
+            var links = await db.QueryAsync(sql, new { userId = userId });
 
-            feedBuilder.Append($"""
+            StringBuilder feedBuilder = new StringBuilder();
+            int count = 1;
+            foreach (var link in links)
+            {
+                XmlReader reader = XmlReader.Create(link.url);
+                SyndicationFeed feedItems = SyndicationFeed.Load(reader);
+                reader.Close();
+
+                feedBuilder.Append($"""
             <div class="feed mb-4">
                 <h3 id="{link.name}" class="feed-title">{count}-{link.name}</h3>
             """); //add closing </div> for this in the end
-            var isFirst = true;
-            foreach (var item in feedItems.Items)
-            {
-                var description = item.Summary.Text;
-                var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
-                var publishedDate = item.PublishDate.DateTime;
-                var line = "";
-
-                if (isFirst)
+                var isFirst = true;
+                foreach (var item in feedItems.Items)
                 {
-                    line = "";
-                    isFirst = false;
-                }
-                else
-                {
-                    line = "<hr/>";
-                }
+                    var description = item.Summary?.Text ?? "No Description Available";
+                    var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
+                    var publishedDate = item.PublishDate.DateTime;
+                    var line = "";
 
-                feedBuilder.Append($"""
+                    if (isFirst)
+                    {
+                        line = "";
+                        isFirst = false;
+                    }
+                    else
+                    {
+                        line = "<hr/>";
+                    }
+
+                    feedBuilder.Append($"""
                 {line}
                 <div class="feed-item">
                     <p dir="auto" class="description">
@@ -339,12 +352,22 @@ app.MapGet("/feeds", async (IDbConnection db, HttpContext context) =>
                     <p>Publish Date: {publishedDate}</p>
                 </div>
                 """);
+                }
+                feedBuilder.Append("</div>");
             }
-            feedBuilder.Append("</div>");
+            return Results.Content(feedBuilder.ToString());
         }
-        return Results.Content(feedBuilder.ToString());
+        return Results.NoContent();
     }
-    return Results.NoContent();
+    catch (Exception ex) 
+    {
+        return Results.Content("""
+            
+                <h3 id="nothing" class="feed-title">No rss file was found using this link</h3>
+           
+            """);
+    }
+    
 });
 
 app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
@@ -373,8 +396,9 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                                     </div>
 
                                     <div class="modal-body">
-                                        <form action="/login" method="post" class="modal-form">
-                                            <div hx-get="/token" hx-trigger="load" hx-swap="innerHTML"></div>
+                                        <form hx-post="add-feed" hx-target=".add-message" class="modal-form">
+                                            <div class="add-message d-none"></div>
+                                            <div hx-get="/token" hx-trigger="load" hx-swap="innerHTML" hx-target="this" ></div>
                                             <div class="form-group">
                                                 <label for="name">Name</label>
                                                 <input class="form-control" type="text" id="name" name="name" placeholder="Name" />
