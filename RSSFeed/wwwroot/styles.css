@@ -2,6 +2,11 @@ html{
     scroll-behavior: smooth;
 }
 
+img{
+    max-width: 100%;
+    height: auto;
+}
+
 .header{
     height: 60px;
     position: relative;
@@ -33,12 +38,21 @@ html{
     color: red;
 }
 
+.login-btn {
+    margin-right: 1rem;
+    background-color: white;
+    border: none;
+    border-radius: 16px;
+    color: rgb(7, 69, 212);
+    height: 2rem;
+}
+
 .main-container {
     display: grid;
     grid-template-columns: 200px 1fr;
     grid-gap: 10px;
     min-height: 100vh;
-  }
+}
   
   /* Media query to hide sidebar on mobile devices */
   @media (max-width: 768px) {
@@ -237,4 +251,8 @@ html{
     top: -7px !important; 
     transition: ease-in-out 0.5s;
 }
+
+
+
+
 

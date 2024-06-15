@@ -28,21 +28,10 @@
     <div class="replace" hx-get="check-page" hx-trigger="load" hx-swap="innerHTML">
     </div>
 
-    <footer style="width: 100%; z-index: 100;">
+    <footer style="width: 100vw; z-index: 100;">
         <div class="text-center p-3" style="background-color: rgb(59, 115, 246);">
             Copyright 2024 @Abdullah Haytham Hedeya
         </div>
     </footer>
 </body>
-
-<script>
-    const menu = document.querySelector('.menu');
-    const sidebar = document.querySelector('.sidebar-container');
-    const main = document.querySelector('.main-container');
-
-    menu.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        main.classList.toggle('no-grid')
-    });
-</script>
 </html>

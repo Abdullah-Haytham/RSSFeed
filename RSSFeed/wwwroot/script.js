@@ -4,12 +4,10 @@ const noSpacesRegex = /^\S+$/;
 
 document.body.addEventListener('htmx:afterRequest', function (evt) {
     if (evt.detail.requestConfig.path === "/check-page") {
-        console.log("check-page wooo")
         const emailInput = document.getElementById("email")
         const passwordInput = document.getElementById("password")
 
         if (emailInput != null && passwordInput != null) {
-            console.log("fi 7aga b null")
             const emailVal = document.getElementsByClassName("email-val")[0]
             const passwordVal = document.getElementsByClassName("pass-val")[0]
 
@@ -19,40 +17,56 @@ document.body.addEventListener('htmx:afterRequest', function (evt) {
     }
 
     if (evt.detail.requestConfig.path === "/login") {
-        console.log("tried login")
         alertBox = document.getElementById("alert-box");
-        console.log(alertBox.innerHTML)
         if (alertBox.innerHTML === "User logged in successfully") {
-            console.log("Login Successful")
+            alert("Login Successful")
             htmx.ajax("GET", "/check-page", { target: ".replace" })
+        } else {
         }
     }
 
     if (evt.detail.requestConfig.path === "/register") {
         secondDelay()
-        console.log("tried register")
         alertBox = document.getElementById("alert-box");
-        console.log(alertBox.innerHTML)
         if (alertBox.innerHTML === "User Created successfully") {
-            console.log("Register Successful")
+            alert("User Created successfully")
             htmx.ajax("GET", "/login-page", { target: ".replace" })
+        } else {
+            alert("Error! Try Registering Again")
         }
     }
 
     if (evt.detail.requestConfig.path === "logout") {
         htmx.ajax("GET", "/login-page", { target: ".replace" })
+        alert("Logout Successfull")
     }
 
-    if (evt.detail.requestConfig.path === "/add-feed") {
+    if (evt.detail.requestConfig.path === "add-feed") {
         const addMessage = document.getElementById("add-message")
-        var myModal = new bootstrap.Modal(document.getElementById('add-modal'));
 
-        if (addMessage.innerHTML === Feed Added Successfully){
+        if (addMessage.innerHTML === "Feed Added Successfully") {
+            alert("Feed Added Successfully")
             htmx.ajax("GET", "/feeds", { target: ".feed-container" })
             htmx.ajax("GET", "/shortcuts", { target: ".shortcuts" })
+            htmx.ajax("GET", "/select-options", { target: ".form-select" })
+        } else {
+            alert("Error! Feed not added")
         }
-        myModal.hide();
         
+    }
+
+    if (evt.detail.requestConfig.path === "delete-feed") {
+        const deleteMessage = document.getElementById("delete-message")
+
+        if (deleteMessage.innerHTML === "Feed Deleted Successfully") {
+            alert("Feed Deleted Successfully")
+            htmx.ajax("GET", "/feeds", { target: ".feed-container" })
+            htmx.ajax("GET", "/shortcuts", { target: ".shortcuts" })
+            htmx.ajax("GET", "/select-options", { target: ".form-select" })
+        } else {
+            alert("Error! Feed not Deleted")
+        }
+
     }
 }
 )
