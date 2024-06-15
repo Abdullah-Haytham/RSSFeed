@@ -173,12 +173,12 @@ app.MapGet("/register-page", () =>{
             </form>
     </main>
     <script>
-        const regEmailInput = document.getElementById("email");
-        const regPasswordInput = document.getElementById("password");
-        const regPasswordInput2 = document.getElementById("password2");
+        let regEmailInput = document.getElementById("email");
+        let regPasswordInput = document.getElementById("password");
+        let regPasswordInput2 = document.getElementById("password2");
     
         function removeAlertClass() {
-            const alertingBox = document.getElementById("alert-box");
+            let alertingBox = document.getElementById("alert-box");
             if (alertingBox.classList.contains("red")) {
                 alertingBox.classList.remove("red");
             } else if(alertingBox.classList.contains("green")){
@@ -234,11 +234,11 @@ app.MapGet("/login-page", (HttpContext context) => {
                 </form>
             </main>
             <script>
-                const emailInput2 = document.getElementById("email");
-                const passwordInput2 = document.getElementById("password");
+                let emailInput2 = document.getElementById("email");
+                let passwordInput2 = document.getElementById("password");
         
                 function removeAlertClass() {
-                    const alertingBox = document.getElementById("alert-box");
+                    let alertingBox = document.getElementById("alert-box");
                     if (alertingBox.classList.contains("red")) {
                         alertingBox.classList.remove("red");
                     } else if(alertingBox.classList.contains("green")){
@@ -454,9 +454,9 @@ app.MapGet("/", (HttpContext context) =>
                         </div>
                     </main>
                     <script>
-                        const menu = document.querySelector('.menu');
-                        const sidebar = document.querySelector('.sidebar-container');
-                        const main = document.querySelector('.main-container');
+                        let menu = document.querySelector('.menu');
+                        let sidebar = document.querySelector('.sidebar-container');
+                        let main = document.querySelector('.main-container');
 
         """ + " menu.addEventListener('click', () => { sidebar.classList.toggle('active'); main.classList.toggle('no-grid')});</script></div>" + """
             <footer style="width: 100vw; z-index: 100;">
@@ -610,8 +610,8 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                         </div>
                     </main>
                     <script>
-                        const deleteSelect = document.getElementById("delete-select")
-                        const deleteBtn = document.getElementById("delete-btn")
+                        let deleteSelect = document.getElementById("delete-select")
+                        let deleteBtn = document.getElementById("delete-btn")
                         if(deleteSelect.value === "Select a feed to delete" || deleteSelect.value === ""){
                             deleteBtn.disabled = true
                         }
@@ -621,9 +621,9 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                             } else {deleteBtn.disabled = false}
                         })
 
-                        const menu = document.querySelector('.menu');
-                        const sidebar = document.querySelector('.sidebar-container');
-                        const main = document.querySelector('.main-container');
+                        let menu = document.querySelector('.menu');
+                        let sidebar = document.querySelector('.sidebar-container');
+                        let main = document.querySelector('.main-container');
 
                         menu.addEventListener('click', () => {
                             sidebar.classList.toggle('active');
@@ -674,11 +674,11 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                 </form>
             </main>
             <script>
-                const emailInput = document.getElementById("email");
-                const passwordInput = document.getElementById("password");
+                let emailInput = document.getElementById("email");
+                let passwordInput = document.getElementById("password");
         
                 function removeAlertClass() {
-                    const alertingBox = document.getElementById("alert-box");
+                    let alertingBox = document.getElementById("alert-box");
                     if (alertingBox.classList.contains("red")) {
                         alertingBox.classList.remove("red");
                     } else if(alertingBox.classList.contains("green")){
