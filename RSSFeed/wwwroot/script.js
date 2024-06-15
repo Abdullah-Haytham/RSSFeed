@@ -46,11 +46,21 @@ document.body.addEventListener('htmx:afterRequest', function (evt) {
 
         if (addMessage.innerHTML === "Feed Added Successfully") {
             alert("Feed Added Successfully")
-            htmx.ajax("GET", "/feeds", { target: ".feed-container" })
-            htmx.ajax("GET", "/shortcuts", { target: ".shortcuts" })
-            htmx.ajax("GET", "/select-options", { target: ".form-select" })
+            htmxGet("/feeds", ".feed-container")
+                .then(() => {
+                    return htmxGet("/shortcuts", ".shortcuts");
+                })
+                .then(() => {
+                    return htmxGet("/select-options", ".form-select");
+                })
+                .then(() => {
+                    console.log("All AJAX calls completed successfully");
+                })
+                .catch(error => {
+                    console.error("Error during AJAX calls:", error);
+                });
         } else {
-            alert("Error! Feed not added")
+            alert(addMessage.innerHTML)
         }
         
     }
@@ -60,9 +70,19 @@ document.body.addEventListener('htmx:afterRequest', function (evt) {
 
         if (deleteMessage.innerHTML === "Feed Deleted Successfully") {
             alert("Feed Deleted Successfully")
-            htmx.ajax("GET", "/feeds", { target: ".feed-container" })
-            htmx.ajax("GET", "/shortcuts", { target: ".shortcuts" })
-            htmx.ajax("GET", "/select-options", { target: ".form-select" })
+            htmxGet("/feeds", ".feed-container")
+                .then(() => {
+                    return htmxGet("/shortcuts", ".shortcuts");
+                })
+                .then(() => {
+                    return htmxGet("/select-options", ".form-select");
+                })
+                .then(() => {
+                    console.log("All AJAX calls completed successfully");
+                })
+                .catch(error => {
+                    console.error("Error during AJAX calls:", error);
+                });
         } else {
             alert("Error! Feed not Deleted")
         }
@@ -99,4 +119,12 @@ function sleep(ms) {
 
 async function secondDelay() {
     await sleep(1000)
+}
+
+function htmxGet(url, target) {
+    return new Promise((resolve, reject) => {
+        htmx.ajax("GET", url, { target: target })
+            .then(response => resolve(response))
+            .catch(error => reject(error));
+    });
 }

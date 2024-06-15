@@ -12,8 +12,10 @@ using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
+string connectionString = "Data Source=wwwroot/linksdb.db";
+
 builder.Services.AddAntiforgery();
-builder.Services.AddSingleton<IDbConnection>(_ => new SqliteConnection("Data Source=wwwroot/linksdb.db"));
+builder.Services.AddSingleton<IDbConnection>(_ => new SqliteConnection(connectionString));
 
 var app = builder.Build();
 
@@ -51,33 +53,37 @@ app.MapPost("/login", async (HttpContext context, IAntiforgery antiforgery, IDbC
 {
     await antiforgery.ValidateRequestAsync(context);
 
-    string sql = "SELECT userId FROM users WHERE email = @Email AND password = @Password";
-    var userId = await db.QueryFirstOrDefaultAsync<int>(sql, new { Email = email, Password = password });
+    using (var connection = new SqliteConnection(connectionString))
+    {
+        string sql = "SELECT userId FROM users WHERE email = @Email AND password = @Password";
+        var userId = await connection.QueryFirstOrDefaultAsync<int>(sql, new { Email = email, Password = password });
 
-    if (userId > 0)
-    {
-        context.Response.Cookies.Append("UserId", userId.ToString(), cookieOptions);
-        context.Response.Cookies.Append("Email", email, cookieOptions);
-        return Results.Content("""<div id="alert-box" class="green">User logged in successfully</div> """);
-    }
+        if (userId > 0)
+        {
+            context.Response.Cookies.Append("UserId", userId.ToString(), cookieOptions);
+            context.Response.Cookies.Append("Email", email, cookieOptions);
+            return Results.Content("""<div id="alert-box" class="green">User logged in successfully</div> """);
+        }
 
-    if(email == null || email == "")
-    {
-        return Results.Content("""<div id="alert-box" class="red">Please Provide an Email</div> """);
+        if (email == null || email == "")
+        {
+            return Results.Content("""<div id="alert-box" class="red">Please Provide an Email</div> """);
+        }
+        else if (password == null || password == "")
+        {
+            return Results.Content("""<div id="alert-box" class="red">Please Provide a Password</div> """);
+        }
+        else if (password.Length < 8)
+        {
+            return Results.Content("""<div id="alert-box" class="red">Password is Too Short</div> """);
+        }
+        else if (password.Contains(" "))
+        {
+            return Results.Content("""<div id="alert-box" class="red">Password Can't contain spaces</div> """);
+        }
+        return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
     }
-    else if(password == null || password == "")
-    {
-        return Results.Content("""<div id="alert-box" class="red">Please Provide a Password</div> """);
-    }
-    else if (password.Length < 8)
-    {
-        return Results.Content("""<div id="alert-box" class="red">Password is Too Short</div> """);
-    }
-    else if(password.Contains(" "))
-    {
-        return Results.Content("""<div id="alert-box" class="red">Password Can't contain spaces</div> """);
-    }
-    return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
+    
 });
 
 app.MapPost("/register", async (HttpContext context, IAntiforgery antiforgery, IDbConnection db, [FromForm] string email, [FromForm] string password, [FromForm] string password2) =>
@@ -109,14 +115,17 @@ app.MapPost("/register", async (HttpContext context, IAntiforgery antiforgery, I
         return Results.Content("""<div id="alert-box" class="red">Password is Too Short</div> """);
     }
 
-    string sql = "INSERT INTO users(email, password) VALUES(@email, @password)";
-    int rows = await db.ExecuteAsync(sql, new { email = email, password = password });
-    if(rows > 0)
+    using (var connection = new SqliteConnection(connectionString))
     {
-        return Results.Content("""<div id="alert-box" class="green">User Created successfully</div> """);
-    }
+        string sql = "INSERT INTO users(email, password) VALUES(@email, @password)";
+        int rows = await connection.ExecuteAsync(sql, new { email = email, password = password });
+        if (rows > 0)
+        {
+            return Results.Content("""<div id="alert-box" class="green">User Created successfully</div> """);
+        }
 
-    return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
+        return Results.Content("""<div id="alert-box" class="red">Invalid Credentials</div> """);
+    }
 
 });
 
@@ -266,20 +275,28 @@ app.MapGet("/shortcuts", async (HttpContext context, IDbConnection db) =>
         string id;
         if (!string.IsNullOrEmpty(email))
         {
-            sql = "SELECT userId FROM users WHERE email = @Email";
-            id = await db.QueryFirstOrDefaultAsync<string>(sql, new { Email = email });
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                sql = "SELECT userId FROM users WHERE email = @Email";
+                id = await connection.QueryFirstOrDefaultAsync<string>(sql, new { Email = email });
+            }
+               
         }
         else
         {
             id = userId;
         }
-        sql = "SELECT name FROM feeds WHERE userId=@userId";
-        var names = await db.QueryAsync(sql, new {userId = id});
 
         StringBuilder shortcuts = new StringBuilder();
-        foreach (var name in names)
+        using (var connection = new SqliteConnection(connectionString))
         {
-            shortcuts.Append(@$"<a href=""#{name.name}"" class=""shortcut"">{name.name}</a>");
+            sql = "SELECT name FROM feeds WHERE userId=@userId";
+            var names = await connection.QueryAsync(sql, new { userId = id });
+
+            foreach (var name in names)
+            {
+                shortcuts.Append(@$"<a href=""#{name.name}"" class=""shortcut"">{name.name}</a>");
+            }
         }
         return Results.Content(shortcuts.ToString());
     }
@@ -290,108 +307,112 @@ app.MapGet("/select-options", async (HttpContext context, IDbConnection db) =>
 {
     if (context.Request.Cookies.TryGetValue("UserId", out var userId))
     {
-        var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
-        var names = await db.QueryAsync(sql, new { userId = userId });
-
-        StringBuilder shortcuts = new StringBuilder();
-        shortcuts.Append(@$"<option selected>Select a feed to delete</option>");
-        foreach (var name in names)
+        using (var connection = new SqliteConnection(connectionString))
         {
-            shortcuts.Append(@$"<option value={name.url}>{name.name}</option>");
+            var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
+            var names = await connection.QueryAsync(sql, new { userId = userId });
+
+            StringBuilder shortcuts = new StringBuilder();
+            shortcuts.Append(@$"<option selected>Select a feed to delete</option>");
+            foreach (var name in names)
+            {
+                shortcuts.Append(@$"<option value={name.url}>{name.name}</option>");
+            }
+            return Results.Content(shortcuts.ToString());
         }
-        return Results.Content(shortcuts.ToString());
     }
     return Results.NoContent();
 });
 
 app.MapGet("/feeds", async (IDbConnection db, HttpContext context) =>
 {
-    try
+    using (var connection = new SqliteConnection(connectionString))
     {
+        try
+        {
             var query = context.Request.Query;
             var email = query["feed"];
             if (context.Request.Cookies.TryGetValue("UserId", out var userId) || !string.IsNullOrEmpty(email))
             {
-            var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
-            string id;
-            if (!string.IsNullOrEmpty(email))
-            {
-                sql = "SELECT userId FROM users WHERE email = @Email";
-                id = await db.QueryFirstOrDefaultAsync<string>(sql, new { Email = email});
-            }
-            else
-            {
-                id=userId;
-            }
-            sql = "SELECT name, url FROM feeds WHERE userId=@userId";
-            var links = await db.QueryAsync(sql, new { userId = id });
+                var sql = "SELECT name, url FROM feeds WHERE userId=@userId";
+                string id;
+                if (!string.IsNullOrEmpty(email))
+                {
+                    sql = "SELECT userId FROM users WHERE email = @Email";
+                    id = await connection.QueryFirstOrDefaultAsync<string>(sql, new { Email = email });
+                }
+                else
+                {
+                    id = userId;
+                }
+                sql = "SELECT name, url FROM feeds WHERE userId=@userId";
+                var links = await connection.QueryAsync(sql, new { userId = id });
 
-            if(!links.Any())
-            {
-                return Results.Content("""
+                if (!links.Any())
+                {
+                    return Results.Content("""
                     <div style="width: 100%; height: 100%;" class="d-flex justify-content-center align-items-center">
                         <h1>Looks Empty Here</h1>
                     </div>
                     """, "text/html");
-            }
+                }
 
-            StringBuilder feedBuilder = new StringBuilder();
-            int count = 1;
-            foreach (var link in links)
-            {
-                XmlReader reader = XmlReader.Create(link.url);
-                SyndicationFeed feedItems = SyndicationFeed.Load(reader);
-                reader.Close();
-
-                feedBuilder.Append($"""
-                <div class="feed mb-4">
-                    <h3 id="{link.name}" class="feed-title">{count}-{link.name}</h3>
-                """); //add closing </div> for this in the end
-                var isFirst = true;
-                foreach (var item in feedItems.Items)
+                StringBuilder feedBuilder = new StringBuilder();
+                int count = 1;
+                foreach (var link in links)
                 {
-                    var description = item.Summary?.Text ?? "No Description Available";
-                    var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
-                    var publishedDate = item.PublishDate.DateTime;
-                    var line = "";
-
-                    if (isFirst)
-                    {
-                        line = "";
-                        isFirst = false;
-                    }
-                    else
-                    {
-                        line = "<hr/>";
-                    }
+                    XmlReader reader = XmlReader.Create(link.url);
+                    SyndicationFeed feedItems = SyndicationFeed.Load(reader);
+                    reader.Close();
 
                     feedBuilder.Append($"""
-                {line}
-                <div class="feed-item">
-                    <p dir="auto" class="description">
-                        {description}
-                    </p>
-                    <a href="{itemLink}" class="btn btn-outline-primary mb-2">Read More<a>
-                    <p>Publish Date: {publishedDate}</p>
-                </div>
-                """);
+                        <div class="feed mb-4">
+                            <h3 id="{link.name}" class="feed-title">{count}-{link.name}</h3>
+                        """); //add closing </div> for this in the end
+                    var isFirst = true;
+                    foreach (var item in feedItems.Items)
+                    {
+                        var description = item.Summary?.Text ?? "No Description Available";
+                        var itemLink = item.Links.Count > 0 ? item.Links[0]?.Uri?.AbsoluteUri ?? "#" : "#";
+                        var publishedDate = item.PublishDate.DateTime;
+                        var line = "";
+
+                        if (isFirst)
+                        {
+                            line = "";
+                            isFirst = false;
+                        }
+                        else
+                        {
+                            line = "<hr/>";
+                        }
+
+                        feedBuilder.Append($"""
+                        {line}
+                        <div class="feed-item">
+                            <p dir="auto" class="description">
+                                {description}
+                            </p>
+                            <a href="{itemLink}" class="btn btn-outline-primary mb-2">Read More<a>
+                            <p>Publish Date: {publishedDate}</p>
+                        </div>
+                        """);
+                    }
+                    feedBuilder.Append("</div>");
+                    count++;
                 }
-                feedBuilder.Append("</div>");
-                count++;
+                return Results.Content(feedBuilder.ToString());
             }
-            return Results.Content(feedBuilder.ToString());
-            }
-        return Results.NoContent();
-    }
-    catch (Exception ex) 
-    {
-        return Results.Content("""
-            
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return Results.Content("""
                 <h3 id="nothing" class="feed-title">No rss file was found using this link</h3>
-           
             """);
+        }
     }
-    
+        
 });
 
 app.MapGet("/", (HttpContext context) =>
@@ -555,7 +576,8 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                                                 <input class="form-control" type="text" id="url" name="url" placeholder="Url" />
                                             </div>
 
-                                            <button class="btn btn-primary" data-bs-dismiss="modal" type="submit">Add Feed</button>
+                                            <button class="btn btn-primary" id="add-btn" data-bs-dismiss="modal" type="submit">Add Feed</button>
+
                                         </form>
                                     </div>
                                 </div>
@@ -610,6 +632,25 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                         </div>
                     </main>
                     <script>
+                        let addBtn = document.getElementById("add-btn")
+                        let name = document.getElementById("name")
+                        let url = document.getElementById("url")
+                        if(name.value === "" or url.value === "") {addBtn.disabled = true}
+        
+                        console.log("name: ", name.value)
+                        console.log("url: ", url.value)
+        
+                        name.addEventListener("change", (e)=>{
+                            if(name.value === "" or url.value === "") {addBtn.disabled = true}
+                            else{addBtn.disabled = true}
+                        })
+        
+                        url.addEventListener("change", (e)=>{
+                            if(name.value === "" or url.value === "") {addBtn.disabled = true}
+                            else{addBtn.disabled = true}
+                        })
+
+
                         let deleteSelect = document.getElementById("delete-select")
                         let deleteBtn = document.getElementById("delete-btn")
                         if(deleteSelect.value === "Select a feed to delete" || deleteSelect.value === ""){
@@ -700,17 +741,34 @@ app.MapPost("/add-feed", async (HttpContext context, IAntiforgery antiforgery, I
 {
     await antiforgery.ValidateRequestAsync(context);
 
-    if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+    if(name=="" && url == "")
     {
-        string sql = "INSERT INTO feeds(name, url, userId) VALUES(@name, @url, @userId)";
-        int rows = await db.ExecuteAsync(sql, new { name = name, url = url, userId = userId });
-
-        if (rows > 0)
-        {
-            return Results.Content(""" <div id="add-message">Feed Added Successfully</div>""", "text/html");
-        }
+        return Results.Content(""" <div id="add-message">Feed not Added. Please Provide a Name and Url</div>""", "text/html");
     }
-    return Results.Content(""" <div id="add-message">Feed not Added</div>""", "text/html");
+    if (name == "")
+    {
+        return Results.Content(""" <div id="add-message">Feed not Added. Please Provide a Name</div>""", "text/html");
+    }
+    if(url == "")
+    {
+        return Results.Content(""" <div id="add-message">Feed not Added. Please Provide a Url</div>""", "text/html");
+    }
+
+    using (var connection = new SqliteConnection(connectionString))
+    {
+        if (context.Request.Cookies.TryGetValue("UserId", out var userId))
+        {
+            string sql = "INSERT INTO feeds(name, url, userId) VALUES(@name, @url, @userId)";
+            int rows = await connection.ExecuteAsync(sql, new { name = name, url = url, userId = userId });
+
+            if (rows > 0)
+            {
+                return Results.Content(""" <div id="add-message">Feed Added Successfully</div>""", "text/html");
+            }
+        }
+        return Results.Content(""" <div id="add-message">Feed not Added</div>""", "text/html");
+    }
+        
 });
 
 app.MapDelete("/delete-feed", async (HttpContext context, IAntiforgery antiforgery, IDbConnection db, [FromForm] string feed) =>
@@ -719,13 +777,16 @@ app.MapDelete("/delete-feed", async (HttpContext context, IAntiforgery antiforge
 
     if (context.Request.Cookies.TryGetValue("UserId", out var userId))
     {
-        string sql = "DELETE FROM feeds WHERE userId=@userId AND url=@feed";
-        int rows = await db.ExecuteAsync(sql, new { userId = userId, feed = feed });
-
-        if (rows > 0)
+        using (var connection = new SqliteConnection(connectionString))
         {
-            return Results.Content(""" <div id="delete-message">Feed Deleted Successfully</div>""", "text/html");
-        }
+            string sql = "DELETE FROM feeds WHERE userId=@userId AND url=@feed";
+            int rows = await connection.ExecuteAsync(sql, new { userId = userId, feed = feed });
+
+            if (rows > 0)
+            {
+                return Results.Content(""" <div id="delete-message">Feed Deleted Successfully</div>""", "text/html");
+            }
+        } 
     }
     return Results.Content(""" <div id="delete-message">Feed not Deleted</div>""", "text/html");
 });

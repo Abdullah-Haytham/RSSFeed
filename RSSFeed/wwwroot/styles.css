@@ -121,6 +121,7 @@ img{
 
 .action-text{
     margin: 0;
+    cursor: pointer;
 }
 
 .actions-container{
