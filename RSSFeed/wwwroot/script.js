@@ -128,3 +128,11 @@ function htmxGet(url, target) {
             .catch(error => reject(error));
     });
 }
+
+function toggleMenu() {
+    let menu = document.querySelector('.menu');
+    let sidebar = document.querySelector('.sidebar-container');
+    let main = document.querySelector('.main-container');
+    sidebar.classList.toggle('active');
+    main.classList.toggle('no-grid')
+}

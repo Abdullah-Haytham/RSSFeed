@@ -144,7 +144,6 @@ app.MapGet("/register-page", () =>{
     var htmlContent = """
         <header class="header">
             <div class="navbar d-flex align-items-center">
-                <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                 <h3 class="logo text-white">Feedy</h3>
             </div>
         </header>
@@ -210,7 +209,6 @@ app.MapGet("/login-page", (HttpContext context) => {
          
             <header class="header">
                 <div class="navbar d-flex align-items-center">
-                    <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                     <h3 class="logo text-white">Feedy</h3>
                 </div>
             </header>
@@ -452,7 +450,6 @@ app.MapGet("/", (HttpContext context) =>
                     <div class="replace">
                     <header class="header">
                         <div class="navbar d-flex align-items-center">
-                            <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                             <h3 class="logo text-white">Feedy</h3>
                             <button hx-get="/login-page" hx-trigger="click" hx-target=".replace" class="login-btn">login</button>
                             <div class="d-none logout"></div>
@@ -544,7 +541,7 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
         var htmlContent = """
                     <header class="header">
                         <div class="navbar d-flex align-items-center">
-                            <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
+                            <button onclick="toggleMenu()" class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                             <h3 class="logo text-white">Feedy</h3>
                             <button hx-post="logout" hx-trigger="click" hx-target=".logout" class="logout-btn">logout</button>
                             <div class="d-none logout"></div>
@@ -662,14 +659,7 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
                             } else {deleteBtn.disabled = false}
                         })
 
-                        let menu = document.querySelector('.menu');
-                        let sidebar = document.querySelector('.sidebar-container');
-                        let main = document.querySelector('.main-container');
-
-                        menu.addEventListener('click', () => {
-                            sidebar.classList.toggle('active');
-                            main.classList.toggle('no-grid')
-                        });
+                            
                     </script>
                     <div hx-get="/share" hx-swap="outerHTML" hx-trigger="load"></div>
 
@@ -682,7 +672,6 @@ app.MapGet("/check-page", async (HttpContext context, IDbConnection db) =>
          
             <header class="header">
                 <div class="navbar d-flex align-items-center">
-                    <button class="menu"><img class="menu-img" src="images/menu-svgrepo-com.svg" alt="menu button"></button>
                     <h3 class="logo text-white">Feedy</h3>
                 </div>
             </header>
